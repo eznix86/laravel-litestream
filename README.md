@@ -15,7 +15,6 @@ Litestream itself runs as a separate process and does not require application-le
 ## Requirements
 
 - PHP `^8.4`
-- Laravel package auto-discovery support
 - Litestream binary support on macOS or Linux
 - SQLite should be configured correctly. (See Get Started)
 
