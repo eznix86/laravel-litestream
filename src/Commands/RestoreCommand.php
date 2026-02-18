@@ -8,6 +8,7 @@ use Eznix86\Litestream\Concerns\ExecutesLitestreamCommands;
 use Eznix86\Litestream\Concerns\GeneratesLitestreamConfig;
 use Eznix86\Litestream\Concerns\ResolvesLitestreamBinaryPath;
 use Eznix86\Litestream\Concerns\ValidatesLitestream;
+use Eznix86\Litestream\Facades\Litestream;
 use Illuminate\Console\Command;
 use Throwable;
 
@@ -30,13 +31,18 @@ final class RestoreCommand extends Command
             $configPath = $this->generateConfig();
             $binaryPath = $this->resolveExistingBinaryPath();
 
-            $this->restore(
-                $binaryPath,
-                $configPath,
-                function (string $type, string $buffer): void {
-                    $this->output->write($buffer);
-                },
-            );
+            collect(Litestream::resolveConnections())
+                ->each(function ($item, $key) use ($binaryPath, $configPath) {
+                    $path = config("database.connections.{$key}.database");
+                    $this->restore(
+                        $binaryPath,
+                        $configPath,
+                        $path,
+                        function (string $type, string $buffer): void {
+                            $this->output->write($buffer);
+                        },
+                    );
+                });
         } catch (Throwable $exception) {
             $this->components->error($exception->getMessage());
 

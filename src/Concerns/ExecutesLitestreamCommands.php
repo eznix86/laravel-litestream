@@ -40,9 +40,9 @@ trait ExecutesLitestreamCommands
     /**
      * @param  null|callable(string, string): void  $onOutput
      */
-    public function restore(string $binaryPath, string $configPath, ?callable $onOutput = null): string
+    public function restore(string $binaryPath, string $configPath, string $path, ?callable $onOutput = null): string
     {
-        return $this->runWithTimeout([$binaryPath, 'restore', '-config', $configPath], $onOutput);
+        return $this->runWithTimeout([$binaryPath, 'restore', '-config', $configPath, $path], $onOutput);
     }
 
     /**
