@@ -40,7 +40,7 @@ it('invokes each command successfully in scaffold mode', function (): void {
 
     Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'replicate', '-config', $configPath]);
     Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'databases', '-config', $configPath]);
-    Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'restore', '-config', $configPath]);
+    Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'restore', '-config', $configPath, ':memory:']);
 });
 
 /**

@@ -91,7 +91,7 @@ it('regenerates yaml before restore command execution using configured connectio
     expect($exitCode)->toBe(0)
         ->and(json_encode($paths, JSON_THROW_ON_ERROR))->toBe(json_encode(['/tmp/analytics.sqlite'], JSON_THROW_ON_ERROR));
 
-    Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'restore', '-config', $configPath]);
+    Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'restore', '-config', $configPath, '/tmp/analytics.sqlite']);
 });
 
 it('hard fails when a connection references a missing replica key', function (): void {

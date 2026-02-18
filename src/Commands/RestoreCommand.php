@@ -10,6 +10,7 @@ use Eznix86\Litestream\Concerns\ResolvesLitestreamBinaryPath;
 use Eznix86\Litestream\Concerns\ValidatesLitestream;
 use Eznix86\Litestream\Facades\Litestream;
 use Illuminate\Console\Command;
+use RuntimeException;
 use Throwable;
 
 final class RestoreCommand extends Command
@@ -33,7 +34,8 @@ final class RestoreCommand extends Command
 
             collect(Litestream::resolveConnections())
                 ->each(function ($item, $key) use ($binaryPath, $configPath) {
-                    $path = config("database.connections.{$key}.database");
+                    $path = $this->resolveDatabasePath((string) $key);
+
                     $this->restore(
                         $binaryPath,
                         $configPath,
@@ -52,5 +54,31 @@ final class RestoreCommand extends Command
         $this->components->info(sprintf('Litestream restore completed. YAML regenerated at [%s].', $configPath));
 
         return self::SUCCESS;
+    }
+
+    private function resolveDatabasePath(string $connectionKey): string
+    {
+        $databaseConnection = $connectionKey === 'default'
+            ? config('database.default')
+            : $connectionKey;
+
+        if (! is_string($databaseConnection) || blank($databaseConnection)) {
+            throw new RuntimeException(sprintf(
+                'Unable to resolve database connection for Litestream connection [%s].',
+                $connectionKey,
+            ));
+        }
+
+        $databasePath = config(sprintf('database.connections.%s.database', $databaseConnection));
+
+        if (! is_string($databasePath) || blank($databasePath)) {
+            throw new RuntimeException(sprintf(
+                'Litestream connection [%s] maps to database connection [%s], but no database path is configured.',
+                $connectionKey,
+                $databaseConnection,
+            ));
+        }
+
+        return $databasePath;
     }
 }

@@ -47,8 +47,8 @@ it('runs restore with a bounded timeout', function (): void {
         use ExecutesLitestreamCommands;
     };
 
-    $runner->restore('/usr/local/bin/litestream', '/tmp/litestream.yml');
+    $runner->restore('/usr/local/bin/litestream', '/tmp/litestream.yml', '/tmp/database.sqlite');
 
-    Process::assertRan(static fn ($process): bool => $process->command === ['/usr/local/bin/litestream', 'restore', '-config', '/tmp/litestream.yml']
+    Process::assertRan(static fn ($process): bool => $process->command === ['/usr/local/bin/litestream', 'restore', '-config', '/tmp/litestream.yml', '/tmp/database.sqlite']
         && $process->timeout === 120);
 });

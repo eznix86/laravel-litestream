@@ -24,7 +24,7 @@ it('restores without requiring replica selection even with multiple configured r
     expect($exitCode)->toBe(0)
         ->and(file_exists($configPath))->toBeTrue();
 
-    Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'restore', '-config', $configPath]);
+    Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'restore', '-config', $configPath, ':memory:']);
 });
 
 /**
