@@ -1,14 +1,12 @@
-# Laravel Litestream
+# Litestream for Laravel
 
-[Litestream](https://litestream.io/) for Laravel.
-
-Litestream allows you continuously replicates your sqlite changes to a handful of replicas and later restore them. Making your SQLite durable.
-
-It provides commands to install Litestream, start replication and restore your databases.
+[Litestream](https://litestream.io/) is a streaming replication tool for SQLite.
 
 ## Introduction
 
-This package is built for SQLite-first Laravel apps that want predictable Litestream operations.
+This package is built for SQLite-first Laravel apps and will continuously stream SQLite changes to your preferred cloud storage or local files.
+
+This will help you to quickly recover to the point of failure if your server goes down.
 
 Litestream itself runs as a separate process and does not require application-level replication code changes. If you are new to Litestream, start with the official [Litestream Getting Started guide](https://litestream.io/getting-started/) and [How it works](https://litestream.io/how-it-works/).
 
