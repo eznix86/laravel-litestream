@@ -33,7 +33,7 @@ final class RestoreCommand extends Command
             $binaryPath = $this->resolveExistingBinaryPath();
 
             collect(Litestream::resolveConnections())
-                ->each(function ($item, $key) use ($binaryPath, $configPath) {
+                ->each(function ($item, $key) use ($binaryPath, $configPath): void {
                     $path = $this->resolveDatabasePath((string) $key);
 
                     $this->restore(
