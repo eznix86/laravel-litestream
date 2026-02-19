@@ -1,5 +1,7 @@
 # Litestream for Laravel
 
+![Litestream for Laravel](./art/litestream-for-laravel.png)
+
 [Litestream](https://litestream.io/) is a streaming replication tool for SQLite.
 
 ## Introduction
