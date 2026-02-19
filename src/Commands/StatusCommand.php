@@ -43,8 +43,6 @@ final class StatusCommand extends Command
             return self::FAILURE;
         }
 
-        $this->components->info(sprintf('Litestream databases status completed. YAML regenerated at [%s].', $configPath));
-
         return self::SUCCESS;
     }
 }
