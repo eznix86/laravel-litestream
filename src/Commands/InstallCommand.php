@@ -9,6 +9,7 @@ use Eznix86\Litestream\Concerns\ValidatesLitestream;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use RuntimeException;
+use Symfony\Component\Console\Helper\ProgressBar;
 use Throwable;
 
 final class InstallCommand extends Command
@@ -37,15 +38,16 @@ final class InstallCommand extends Command
             $this->ensureParentDirectoryExists($binaryPath);
             $this->ensureParentDirectoryExists($configPath);
 
+            ProgressBar::setFormatDefinition('download', '[%bar%] %percent:3s%% %message% ETA %remaining:6s%');
+
             $downloadProgressBar = $this->output->createProgressBar();
-            $downloadProgressBar->setFormat(' %current%/%max% [%bar%] %percent:3s%% %message%');
-            $downloadProgressBar->setMessage('connecting...');
+            $downloadProgressBar->setFormat('download');
+            $downloadProgressBar->setMessage('0/0 B');
             $downloadProgressBar->start();
-            $downloadStartedAt = microtime(true);
 
             $this->downloadLatest(
                 $binaryPath,
-                function (int $downloadTotal, int $downloadedBytes) use ($downloadProgressBar, $downloadStartedAt): void {
+                function (int $downloadTotal, int $downloadedBytes) use ($downloadProgressBar): void {
                     if ($downloadTotal <= 0) {
                         return;
                     }
@@ -56,21 +58,7 @@ final class InstallCommand extends Command
 
                     $clampedDownloadedBytes = min($downloadedBytes, $downloadTotal);
                     $downloadProgressBar->setProgress($clampedDownloadedBytes);
-
-                    $elapsedSeconds = max(microtime(true) - $downloadStartedAt, 0.001);
-                    $speedBytesPerSecond = $clampedDownloadedBytes / $elapsedSeconds;
-                    $remainingBytes = max($downloadTotal - $clampedDownloadedBytes, 0);
-                    $estimatedRemainingSeconds = $speedBytesPerSecond > 0
-                        ? (int) round($remainingBytes / $speedBytesPerSecond)
-                        : 0;
-
-                    $downloadProgressBar->setMessage(sprintf(
-                        '%s/%s %s/s ETA %s',
-                        $this->formatBytes($clampedDownloadedBytes),
-                        $this->formatBytes($downloadTotal),
-                        $this->formatBytes($speedBytesPerSecond),
-                        gmdate('i:s', $estimatedRemainingSeconds),
-                    ));
+                    $downloadProgressBar->setMessage($this->formatTransferred($clampedDownloadedBytes, $downloadTotal));
                 },
             );
 
@@ -119,16 +107,22 @@ final class InstallCommand extends Command
         }
     }
 
-    private function formatBytes(float $bytes): string
+    private function formatTransferred(int $downloadedBytes, int $totalBytes): string
     {
-        if ($bytes <= 0) {
-            return '0 B';
+        if ($totalBytes <= 0) {
+            return '0/0 B';
         }
 
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        $power = min((int) floor(log($bytes, 1024)), count($units) - 1);
-        $normalized = $bytes / (1024 ** $power);
+        $power = min((int) floor(log((float) $totalBytes, 1024)), count($units) - 1);
+        $divisor = 1024 ** $power;
+        $precision = $power === 0 ? 0 : 1;
 
-        return sprintf('%.1f %s', $normalized, $units[$power]);
+        return sprintf(
+            '%s/%s %s',
+            number_format($downloadedBytes / $divisor, $precision),
+            number_format($totalBytes / $divisor, $precision),
+            $units[$power],
+        );
     }
 }
