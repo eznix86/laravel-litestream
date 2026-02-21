@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Eznix86\Litestream\Facades\Litestream;
+use Illuminate\Support\Env;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Process;
 use Symfony\Component\Yaml\Yaml;
@@ -304,12 +305,13 @@ function prepareYamlRegenerationCommandExecution(?string $configPath = null): ar
 function setTestEnvironmentVariable(string $key, string $value): void
 {
     putenv(sprintf('%s=%s', $key, $value));
-    $_ENV[$key] = $value;
+    Env::getRepository()->set($key, $value);
     $_SERVER[$key] = $value;
 }
 
 function clearTestEnvironmentVariable(string $key): void
 {
     putenv($key);
-    unset($_ENV[$key], $_SERVER[$key]);
+    Env::getRepository()->clear($key);
+    unset($_SERVER[$key]);
 }

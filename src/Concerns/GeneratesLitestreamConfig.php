@@ -7,7 +7,9 @@ namespace Eznix86\Litestream\Concerns;
 use Eznix86\Litestream\Enums\PathMode;
 use Eznix86\Litestream\LitestreamManager;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Env;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use RuntimeException;
@@ -223,12 +225,9 @@ trait GeneratesLitestreamConfig
         }
 
         if ($this->isEnvironmentMarker($value)) {
-            /** @var mixed $environmentVariable */
             $environmentVariable = $value['env'];
 
-            if (! is_string($environmentVariable) || blank($environmentVariable)) {
-                throw new InvalidArgumentException('Invalid environment placeholder. Expected a non-empty string in [env].');
-            }
+            throw_if(! is_string($environmentVariable) || blank($environmentVariable), InvalidArgumentException::class, 'Invalid environment placeholder. Expected a non-empty string in [env].');
 
             $resolvedValue = $this->resolveEnvironmentValue($environmentVariable);
 
@@ -265,13 +264,13 @@ trait GeneratesLitestreamConfig
             return (string) $fromGetEnv;
         }
 
-        $fromEnv = $_ENV[$key] ?? null;
+        $fromEnv = Env::get($key);
 
         if (is_scalar($fromEnv)) {
             return (string) $fromEnv;
         }
 
-        $fromServer = $_SERVER[$key] ?? null;
+        $fromServer = Request::server($key) ?? null;
 
         if (is_scalar($fromServer)) {
             return (string) $fromServer;
