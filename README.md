@@ -82,6 +82,7 @@ The command validates configuration, regenerates YAML at `litestream.config_path
 
 ```bash
 php artisan litestream:status
+php artisan litestream:reset
 php artisan litestream:restore
 ```
 
@@ -96,6 +97,7 @@ For deeper operational guidance, see:
 Each `replicas.<key>` entry is passed through to Litestream YAML.
 
 - Keys are normalized recursively from `snake_case` to `kebab-case` when YAML is generated.
+- You can use `['env' => 'VAR_NAME']` for any replica value to emit `${VAR_NAME}` in YAML and inject the real value at runtime via process environment.
 
 For the complete list of replica options per backend, refer to the official Litestream configuration reference:
 

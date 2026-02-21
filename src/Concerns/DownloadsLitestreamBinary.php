@@ -18,7 +18,10 @@ use Throwable;
 
 trait DownloadsLitestreamBinary
 {
-    public function downloadLatest(string $destinationPath): void
+    /**
+     * @param  null|callable(int, int): void  $onDownloadProgress
+     */
+    public function downloadLatest(string $destinationPath, ?callable $onDownloadProgress = null): void
     {
         $asset = $this->resolveLatestAsset();
         $assetName = (string) $asset['name'];
@@ -28,6 +31,20 @@ trait DownloadsLitestreamBinary
         try {
             Http::timeout(20)
                 ->withHeaders(['User-Agent' => 'laravel-litestream'])
+                ->withOptions([
+                    'progress' => static function (
+                        float $downloadTotal,
+                        float $downloadedBytes,
+                        float $_uploadTotal,
+                        float $_uploadedBytes,
+                    ) use ($onDownloadProgress): void {
+                        if ($onDownloadProgress === null) {
+                            return;
+                        }
+
+                        $onDownloadProgress((int) $downloadTotal, (int) $downloadedBytes);
+                    },
+                ])
                 ->sink($archivePath)
                 ->get($asset['browser_download_url'])
                 ->throw()

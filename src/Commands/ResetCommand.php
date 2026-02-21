@@ -12,7 +12,7 @@ use Eznix86\Litestream\Concerns\ValidatesLitestream;
 use Illuminate\Console\Command;
 use Throwable;
 
-final class ReplicateCommand extends Command
+final class ResetCommand extends Command
 {
     use ExecutesLitestreamCommands;
     use GeneratesLitestreamConfig;
@@ -20,9 +20,9 @@ final class ReplicateCommand extends Command
     use StreamsLitestreamOutput;
     use ValidatesLitestream;
 
-    protected $signature = 'litestream:replicate';
+    protected $signature = 'litestream:reset';
 
-    protected $description = 'Start Litestream replication for configured SQLite databases';
+    protected $description = 'Reset Litestream state for configured database mappings';
 
     public function handle(): int
     {
@@ -33,7 +33,7 @@ final class ReplicateCommand extends Command
             $environment = $this->litestreamProcessEnvironment();
             $binaryPath = $this->resolveExistingBinaryPath();
 
-            $this->replicate(
+            $this->reset(
                 $binaryPath,
                 $configPath,
                 $this->streamLitestreamOutput(...),
@@ -44,8 +44,6 @@ final class ReplicateCommand extends Command
 
             return self::FAILURE;
         }
-
-        $this->components->info(sprintf('Litestream replicate started. YAML regenerated at [%s].', $configPath));
 
         return self::SUCCESS;
     }

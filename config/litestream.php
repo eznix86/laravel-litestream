@@ -30,7 +30,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | Destination path for generated Litestream YAML.
-    | Regenerated before `status`, `replicate`, and `restore`.
+    | Regenerated before `status`, `replicate`, `reset`, and `restore`.
     |
     */
     'config_path' => env('LITESTREAM_CONFIG_PATH', storage_path('litestream/litestream.yml')),
@@ -105,6 +105,8 @@ return [
     |
     | Keyed by replica key referenced from `connections.*.replicas`.
     | Values are passed through to Litestream YAML (snake_case -> kebab-case).
+    | Use ['env' => 'VAR_NAME'] to emit ${VAR_NAME} placeholders in YAML
+    | and inject values at runtime via Process::env(...).
     | Refer to https://litestream.io/reference/config/#replica-settings
     |
     */

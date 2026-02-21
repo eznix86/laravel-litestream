@@ -7,6 +7,7 @@ namespace Eznix86\Litestream\Commands;
 use Eznix86\Litestream\Concerns\ExecutesLitestreamCommands;
 use Eznix86\Litestream\Concerns\GeneratesLitestreamConfig;
 use Eznix86\Litestream\Concerns\ResolvesLitestreamBinaryPath;
+use Eznix86\Litestream\Concerns\StreamsLitestreamOutput;
 use Eznix86\Litestream\Concerns\ValidatesLitestream;
 use Illuminate\Console\Command;
 use Throwable;
@@ -16,6 +17,7 @@ final class StatusCommand extends Command
     use ExecutesLitestreamCommands;
     use GeneratesLitestreamConfig;
     use ResolvesLitestreamBinaryPath;
+    use StreamsLitestreamOutput;
     use ValidatesLitestream;
 
     protected $signature = 'litestream:status';
@@ -28,14 +30,14 @@ final class StatusCommand extends Command
             $this->validate();
 
             $configPath = $this->generateConfig();
+            $environment = $this->litestreamProcessEnvironment();
             $binaryPath = $this->resolveExistingBinaryPath();
 
             $this->status(
                 $binaryPath,
                 $configPath,
-                function (string $type, string $buffer): void {
-                    $this->output->write($buffer);
-                },
+                $this->streamLitestreamOutput(...),
+                $environment,
             );
         } catch (Throwable $exception) {
             $this->components->error($exception->getMessage());

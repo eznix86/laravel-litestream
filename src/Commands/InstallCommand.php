@@ -37,7 +37,49 @@ final class InstallCommand extends Command
             $this->ensureParentDirectoryExists($binaryPath);
             $this->ensureParentDirectoryExists($configPath);
 
-            $this->downloadLatest($binaryPath);
+            $downloadProgressBar = $this->output->createProgressBar();
+            $downloadProgressBar->setFormat(' %current%/%max% [%bar%] %percent:3s%% %message%');
+            $downloadProgressBar->setMessage('connecting...');
+            $downloadProgressBar->start();
+            $downloadStartedAt = microtime(true);
+
+            $this->downloadLatest(
+                $binaryPath,
+                function (int $downloadTotal, int $downloadedBytes) use ($downloadProgressBar, $downloadStartedAt): void {
+                    if ($downloadTotal <= 0) {
+                        return;
+                    }
+
+                    if ($downloadProgressBar->getMaxSteps() !== $downloadTotal) {
+                        $downloadProgressBar->setMaxSteps($downloadTotal);
+                    }
+
+                    $clampedDownloadedBytes = min($downloadedBytes, $downloadTotal);
+                    $downloadProgressBar->setProgress($clampedDownloadedBytes);
+
+                    $elapsedSeconds = max(microtime(true) - $downloadStartedAt, 0.001);
+                    $speedBytesPerSecond = $clampedDownloadedBytes / $elapsedSeconds;
+                    $remainingBytes = max($downloadTotal - $clampedDownloadedBytes, 0);
+                    $estimatedRemainingSeconds = $speedBytesPerSecond > 0
+                        ? (int) round($remainingBytes / $speedBytesPerSecond)
+                        : 0;
+
+                    $downloadProgressBar->setMessage(sprintf(
+                        '%s/%s %s/s ETA %s',
+                        $this->formatBytes($clampedDownloadedBytes),
+                        $this->formatBytes($downloadTotal),
+                        $this->formatBytes($speedBytesPerSecond),
+                        gmdate('i:s', $estimatedRemainingSeconds),
+                    ));
+                },
+            );
+
+            if ($downloadProgressBar->getMaxSteps() > 0) {
+                $downloadProgressBar->setProgress($downloadProgressBar->getMaxSteps());
+            }
+
+            $downloadProgressBar->finish();
+            $this->newLine();
 
             if (! chmod($binaryPath, 0755)) {
                 throw new RuntimeException(sprintf('Unable to set executable permissions on [%s].', $binaryPath));
@@ -75,5 +117,18 @@ final class InstallCommand extends Command
         if (! File::makeDirectory($parentDirectory, 0755, true)) {
             throw new RuntimeException(sprintf('Unable to create directory [%s].', $parentDirectory));
         }
+    }
+
+    private function formatBytes(float $bytes): string
+    {
+        if ($bytes <= 0) {
+            return '0 B';
+        }
+
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $power = min((int) floor(log($bytes, 1024)), count($units) - 1);
+        $normalized = $bytes / (1024 ** $power);
+
+        return sprintf('%.1f %s', $normalized, $units[$power]);
     }
 }

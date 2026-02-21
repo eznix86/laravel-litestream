@@ -6,6 +6,7 @@ namespace Eznix86\Litestream;
 
 use Eznix86\Litestream\Commands\InstallCommand;
 use Eznix86\Litestream\Commands\ReplicateCommand;
+use Eznix86\Litestream\Commands\ResetCommand;
 use Eznix86\Litestream\Commands\RestoreCommand;
 use Eznix86\Litestream\Commands\StatusCommand;
 use Illuminate\Support\ServiceProvider;
@@ -33,6 +34,7 @@ final class LitestreamServiceProvider extends ServiceProvider
                 InstallCommand::class,
                 ReplicateCommand::class,
                 StatusCommand::class,
+                ResetCommand::class,
                 RestoreCommand::class,
             ]);
         }

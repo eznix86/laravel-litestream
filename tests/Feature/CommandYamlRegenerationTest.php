@@ -9,6 +9,10 @@ use Symfony\Component\Yaml\Yaml;
 
 afterEach(function (): void {
     Litestream::forgetConnectionResolver();
+
+    clearTestEnvironmentVariable('LITESTREAM_TEST_ACCESS_KEY_ID');
+    clearTestEnvironmentVariable('LITESTREAM_TEST_SECRET_ACCESS_KEY');
+    clearTestEnvironmentVariable('LITESTREAM_TEST_MISSING_PLACEHOLDER');
 });
 
 it('regenerates yaml before replicate command execution', function (): void {
@@ -61,6 +65,81 @@ it('regenerates yaml before status and uses resolver source when registered', fu
         ->and(json_encode($paths, JSON_THROW_ON_ERROR))->toBe(json_encode(['/tmp/from-resolver.sqlite'], JSON_THROW_ON_ERROR));
 
     Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'databases', '-config', $configPath]);
+});
+
+it('regenerates yaml before reset command execution', function (): void {
+    [$binaryPath, $configPath] = prepareYamlRegenerationCommandExecution();
+
+    Process::fake([
+        '*' => Process::result(output: 'reset'),
+    ]);
+
+    $exitCode = Artisan::call('litestream:reset');
+
+    expect($exitCode)->toBe(0)
+        ->and(file_exists($configPath))->toBeTrue()
+        ->and(file_get_contents($configPath))->toContain('dbs:');
+
+    Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'reset', '-config', $configPath]);
+});
+
+it('writes env placeholders to yaml and injects runtime process environment', function (): void {
+    [$binaryPath, $configPath] = prepareYamlRegenerationCommandExecution();
+
+    $accessKey = 'test-access-key';
+    $secretKey = 'test-secret-key';
+    setTestEnvironmentVariable('LITESTREAM_TEST_ACCESS_KEY_ID', $accessKey);
+    setTestEnvironmentVariable('LITESTREAM_TEST_SECRET_ACCESS_KEY', $secretKey);
+
+    config()->set('litestream.replicas.s3', [
+        'type' => 's3',
+        'path' => 'backups/app',
+        'access_key_id' => ['env' => 'LITESTREAM_TEST_ACCESS_KEY_ID'],
+        'secret_access_key' => ['env' => 'LITESTREAM_TEST_SECRET_ACCESS_KEY'],
+    ]);
+
+    Process::fake([
+        '*' => Process::result(output: 'status'),
+    ]);
+
+    $exitCode = Artisan::call('litestream:status');
+    $yaml = file_get_contents($configPath);
+
+    expect($exitCode)->toBe(0)
+        ->and($yaml)->toContain('${LITESTREAM_TEST_ACCESS_KEY_ID}')
+        ->and($yaml)->toContain('${LITESTREAM_TEST_SECRET_ACCESS_KEY}')
+        ->and($yaml)->not->toContain($accessKey)
+        ->and($yaml)->not->toContain($secretKey);
+
+    Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'databases', '-config', $configPath]
+        && $process->environment === [
+            'LITESTREAM_TEST_ACCESS_KEY_ID' => $accessKey,
+            'LITESTREAM_TEST_SECRET_ACCESS_KEY' => $secretKey,
+        ]);
+
+});
+
+it('fails before process execution when env placeholder is missing', function (): void {
+    prepareYamlRegenerationCommandExecution();
+
+    clearTestEnvironmentVariable('LITESTREAM_TEST_MISSING_PLACEHOLDER');
+
+    config()->set('litestream.replicas.s3', [
+        'type' => 's3',
+        'path' => 'backups/app',
+        'access_key_id' => ['env' => 'LITESTREAM_TEST_MISSING_PLACEHOLDER'],
+    ]);
+
+    Process::fake([
+        '*' => Process::result(output: 'status'),
+    ]);
+
+    $exitCode = Artisan::call('litestream:status');
+
+    expect($exitCode)->toBe(1)
+        ->and(Artisan::output())->toContain('Missing required environment variable [LITESTREAM_TEST_MISSING_PLACEHOLDER]');
+
+    Process::assertNothingRan();
 });
 
 it('regenerates yaml before restore command execution using configured connections', function (): void {
@@ -220,4 +299,17 @@ function prepareYamlRegenerationCommandExecution(?string $configPath = null): ar
     config()->set('litestream.config_path', $configPath);
 
     return [$binaryPath, $configPath];
+}
+
+function setTestEnvironmentVariable(string $key, string $value): void
+{
+    putenv(sprintf('%s=%s', $key, $value));
+    $_ENV[$key] = $value;
+    $_SERVER[$key] = $value;
+}
+
+function clearTestEnvironmentVariable(string $key): void
+{
+    putenv($key);
+    unset($_ENV[$key], $_SERVER[$key]);
 }

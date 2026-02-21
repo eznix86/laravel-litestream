@@ -5,14 +5,14 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Process;
 
-it('fails install replicate status and restore when litestream is disabled', function (): void {
+it('fails install replicate status reset and restore when litestream is disabled', function (): void {
     Process::fake([
         '*' => Process::result(output: 'ok'),
     ]);
 
     config()->set('litestream.enabled', false);
 
-    foreach (['litestream:install', 'litestream:replicate', 'litestream:status', 'litestream:restore'] as $command) {
+    foreach (['litestream:install', 'litestream:replicate', 'litestream:status', 'litestream:reset', 'litestream:restore'] as $command) {
         $exitCode = Artisan::call($command, ['--no-interaction' => true]);
 
         expect($exitCode)->toBe(1)

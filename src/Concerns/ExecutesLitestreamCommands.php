@@ -14,10 +14,11 @@ trait ExecutesLitestreamCommands
 
     /**
      * @param  null|callable(string, string): void  $onOutput
+     * @param  array<string, string>  $environment
      */
-    public function replicate(string $binaryPath, string $configPath, ?callable $onOutput = null): string
+    public function replicate(string $binaryPath, string $configPath, ?callable $onOutput = null, array $environment = []): string
     {
-        $result = Process::forever()->run(
+        $result = Process::env($environment)->forever()->run(
             [$binaryPath, 'replicate', '-config', $configPath],
             $onOutput,
         );
@@ -31,27 +32,39 @@ trait ExecutesLitestreamCommands
 
     /**
      * @param  null|callable(string, string): void  $onOutput
+     * @param  array<string, string>  $environment
      */
-    public function status(string $binaryPath, string $configPath, ?callable $onOutput = null): string
+    public function status(string $binaryPath, string $configPath, ?callable $onOutput = null, array $environment = []): string
     {
-        return $this->runWithTimeout([$binaryPath, 'databases', '-config', $configPath], $onOutput);
+        return $this->runWithTimeout([$binaryPath, 'databases', '-config', $configPath], $onOutput, $environment);
     }
 
     /**
      * @param  null|callable(string, string): void  $onOutput
+     * @param  array<string, string>  $environment
      */
-    public function restore(string $binaryPath, string $configPath, string $path, ?callable $onOutput = null): string
+    public function reset(string $binaryPath, string $configPath, ?callable $onOutput = null, array $environment = []): string
     {
-        return $this->runWithTimeout([$binaryPath, 'restore', '-config', $configPath, $path], $onOutput);
+        return $this->runWithTimeout([$binaryPath, 'reset', '-config', $configPath], $onOutput, $environment);
+    }
+
+    /**
+     * @param  null|callable(string, string): void  $onOutput
+     * @param  array<string, string>  $environment
+     */
+    public function restore(string $binaryPath, string $configPath, string $path, ?callable $onOutput = null, array $environment = []): string
+    {
+        return $this->runWithTimeout([$binaryPath, 'restore', '-config', $configPath, $path], $onOutput, $environment);
     }
 
     /**
      * @param  list<string>  $command
      * @param  null|callable(string, string): void  $onOutput
+     * @param  array<string, string>  $environment
      */
-    protected function runWithTimeout(array $command, ?callable $onOutput = null): string
+    protected function runWithTimeout(array $command, ?callable $onOutput = null, array $environment = []): string
     {
-        $result = Process::timeout(self::SHORT_RUNNING_TIMEOUT_SECONDS)->run($command, $onOutput);
+        $result = Process::env($environment)->timeout(self::SHORT_RUNNING_TIMEOUT_SECONDS)->run($command, $onOutput);
 
         if ($result->failed()) {
             throw new RuntimeException($this->resolveErrorMessage($result->errorOutput(), $result->exitCode()));

@@ -17,10 +17,17 @@ use ValueError;
 trait GeneratesLitestreamConfig
 {
     /**
+     * @var array<string, string>
+     */
+    private array $litestreamProcessEnvironment = [];
+
+    /**
      * @param  null|array<string, array<string, mixed>>  $connections
      */
     public function generateConfig(?array $connections = null): string
     {
+        $this->litestreamProcessEnvironment = [];
+
         $manager = LitestreamManager::make();
         $connections ??= $manager->resolveConnections();
 
@@ -38,6 +45,40 @@ trait GeneratesLitestreamConfig
         $payload = $this->buildYamlStructure($connections, $replicasByKey);
 
         return $this->writeYamlFile($payload);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function litestreamProcessEnvironment(): array
+    {
+        return $this->litestreamProcessEnvironment;
+    }
+
+    protected function resolveDatabasePath(string $connectionKey): string
+    {
+        $databaseConnection = $connectionKey === 'default'
+            ? config('database.default')
+            : $connectionKey;
+
+        if (! is_string($databaseConnection) || blank($databaseConnection)) {
+            throw new InvalidArgumentException(sprintf(
+                'Unable to resolve database connection for Litestream connection [%s].',
+                $connectionKey,
+            ));
+        }
+
+        $databasePath = config(sprintf('database.connections.%s.database', $databaseConnection));
+
+        if (! is_string($databasePath) || blank($databasePath)) {
+            throw new InvalidArgumentException(sprintf(
+                'Database path for connection [%s] is missing. Please configure database.connections.%s.database.',
+                $connectionKey,
+                $databaseConnection,
+            ));
+        }
+
+        return $databasePath;
     }
 
     /**
@@ -103,32 +144,6 @@ trait GeneratesLitestreamConfig
         }
     }
 
-    private function resolveDatabasePath(string $connectionKey): string
-    {
-        $databaseConnection = $connectionKey === 'default'
-            ? config('database.default')
-            : $connectionKey;
-
-        if (! is_string($databaseConnection) || blank($databaseConnection)) {
-            throw new InvalidArgumentException(sprintf(
-                'Unable to resolve database connection for Litestream connection [%s].',
-                $connectionKey,
-            ));
-        }
-
-        $databasePath = config(sprintf('database.connections.%s.database', $databaseConnection));
-
-        if (! is_string($databasePath) || blank($databasePath)) {
-            throw new InvalidArgumentException(sprintf(
-                'Database path for connection [%s] is missing. Please configure database.connections.%s.database.',
-                $connectionKey,
-                $databaseConnection,
-            ));
-        }
-
-        return $databasePath;
-    }
-
     /**
      * @param  array<string, mixed>  $connectionConfig
      * @param  array<string, array<string, mixed>>  $replicas
@@ -156,10 +171,10 @@ trait GeneratesLitestreamConfig
                     $pathMode,
                 );
 
-                /** @var array<string, mixed> $normalized */
-                $normalized = $this->normalizeKeys($replicaWithPathMode);
+                $replicaWithTemplatePlaceholders = $this->replaceEnvironmentMarkersWithTemplatePlaceholders($replicaWithPathMode);
 
-                return $normalized;
+                /** @var array<string, mixed> */
+                return $this->normalizeKeys($replicaWithTemplatePlaceholders);
             })
             ->values()
             ->all();
@@ -199,6 +214,70 @@ trait GeneratesLitestreamConfig
         }
 
         return $trimmedPath.'/'.$effectiveConnectionName;
+    }
+
+    private function replaceEnvironmentMarkersWithTemplatePlaceholders(mixed $value): mixed
+    {
+        if (! is_array($value)) {
+            return $value;
+        }
+
+        if ($this->isEnvironmentMarker($value)) {
+            /** @var mixed $environmentVariable */
+            $environmentVariable = $value['env'];
+
+            if (! is_string($environmentVariable) || blank($environmentVariable)) {
+                throw new InvalidArgumentException('Invalid environment placeholder. Expected a non-empty string in [env].');
+            }
+
+            $resolvedValue = $this->resolveEnvironmentValue($environmentVariable);
+
+            if ($resolvedValue === null || $resolvedValue === '') {
+                throw new InvalidArgumentException(sprintf(
+                    'Missing required environment variable [%s] for Litestream replica template generation.',
+                    $environmentVariable,
+                ));
+            }
+
+            $this->litestreamProcessEnvironment[$environmentVariable] = $resolvedValue;
+
+            return sprintf('${%s}', $environmentVariable);
+        }
+
+        return collect($value)
+            ->map(fn (mixed $nestedValue): mixed => $this->replaceEnvironmentMarkersWithTemplatePlaceholders($nestedValue))
+            ->all();
+    }
+
+    /**
+     * @param  array<mixed>  $value
+     */
+    private function isEnvironmentMarker(array $value): bool
+    {
+        return count($value) === 1 && Arr::exists($value, 'env');
+    }
+
+    private function resolveEnvironmentValue(string $key): ?string
+    {
+        $fromGetEnv = getenv($key);
+
+        if ($fromGetEnv !== false) {
+            return (string) $fromGetEnv;
+        }
+
+        $fromEnv = $_ENV[$key] ?? null;
+
+        if (is_scalar($fromEnv)) {
+            return (string) $fromEnv;
+        }
+
+        $fromServer = $_SERVER[$key] ?? null;
+
+        if (is_scalar($fromServer)) {
+            return (string) $fromServer;
+        }
+
+        return null;
     }
 
     private function normalizeKeys(mixed $value): mixed
