@@ -74,9 +74,7 @@ final class SyncCommand extends Command
 
         $normalized = filter_var($timeout, FILTER_VALIDATE_INT);
 
-        if ($normalized === false || $normalized < 30) {
-            throw new InvalidArgumentException('The [--timeout] option must be an integer greater than or equal to 30 seconds.');
-        }
+        throw_if($normalized === false || $normalized < 30, InvalidArgumentException::class, 'The [--timeout] option must be an integer greater than or equal to 30 seconds.');
 
         return $normalized;
     }
