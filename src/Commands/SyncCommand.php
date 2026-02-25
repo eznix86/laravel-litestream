@@ -79,10 +79,24 @@ final class SyncCommand extends Command
     {
         $socketPath = $this->option('socket');
 
-        if (! is_string($socketPath) || blank($socketPath)) {
+        if (is_string($socketPath) && filled($socketPath)) {
+            return $socketPath;
+        }
+
+        if (! (bool) config('litestream.socket.enabled', false)) {
             return null;
         }
 
-        return $socketPath;
+        $configuredSocketPath = config('litestream.socket.path');
+
+        if (is_string($configuredSocketPath) && filled($configuredSocketPath)) {
+            return $configuredSocketPath;
+        }
+
+        $binaryPath = config('litestream.binary_path');
+
+        return is_string($binaryPath) && filled($binaryPath)
+            ? dirname($binaryPath).'/litestream.sock'
+            : null;
     }
 }

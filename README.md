@@ -62,6 +62,24 @@ If you are using S3-compatible storage, review Litestream's official docs for pr
 - [Replicating to Amazon S3](https://litestream.io/guides/s3/)
 - [Configuration file reference](https://litestream.io/reference/config/)
 
+### IPC Socket
+
+The package can write Litestream's control socket settings into generated YAML:
+
+```php
+'socket' => [
+    'enabled' => true,
+    'path' => env('LITESTREAM_SOCKET_PATH'),
+    'permissions' => env('LITESTREAM_SOCKET_PERMISSIONS', '0600'),
+],
+```
+
+Defaults:
+
+- `socket.enabled`: `true`
+- `socket.path`: `<dirname(litestream.binary_path)>/litestream.sock` when `LITESTREAM_SOCKET_PATH` is not set
+- `socket.permissions`: `0600`
+
 ### 3) Install Litestream binary
 
 ```bash

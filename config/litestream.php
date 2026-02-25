@@ -75,6 +75,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | IPC Socket
+    |--------------------------------------------------------------------------
+    |
+    | Optional Litestream control socket settings written to generated YAML.
+    | Enable this when you want to control Litestream via IPC (e.g. sync).
+    |
+    */
+    'socket' => [
+        'enabled' => (bool) env('LITESTREAM_SOCKET_ENABLED', true),
+        'path' => env('LITESTREAM_SOCKET_PATH'),
+        'permissions' => env('LITESTREAM_SOCKET_PERMISSIONS', '0600'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Connection Mapping
     |--------------------------------------------------------------------------
     |

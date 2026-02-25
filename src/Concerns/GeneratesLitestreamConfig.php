@@ -109,7 +109,43 @@ trait GeneratesLitestreamConfig
             ];
         }
 
-        return ['dbs' => $databases];
+        $payload = ['dbs' => $databases];
+        $socket = $this->resolveSocketConfiguration();
+
+        if ($socket !== null) {
+            $payload['socket'] = $socket;
+        }
+
+        return $payload;
+    }
+
+    /**
+     * @return null|array{path: string, permissions: string}
+     */
+    private function resolveSocketConfiguration(): ?array
+    {
+        if (! (bool) config('litestream.socket.enabled', false)) {
+            return null;
+        }
+
+        $path = config('litestream.socket.path');
+
+        if (! is_string($path) || blank($path)) {
+            $binaryPath = config('litestream.binary_path');
+
+            throw_if(! is_string($binaryPath) || blank($binaryPath), InvalidArgumentException::class, 'Litestream binary_path must be configured to infer socket.path.');
+
+            $path = dirname($binaryPath).'/litestream.sock';
+        }
+
+        $permissions = config('litestream.socket.permissions', '0600');
+
+        throw_if(! is_string($permissions) || blank($permissions), InvalidArgumentException::class, 'Litestream socket.permissions must be a non-empty string when socket is enabled.');
+
+        return [
+            'path' => $path,
+            'permissions' => $permissions,
+        ];
     }
 
     /**

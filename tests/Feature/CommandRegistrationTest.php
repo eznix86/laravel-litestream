@@ -46,7 +46,7 @@ it('invokes each command successfully in scaffold mode', function (): void {
     Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'databases', '-config', $configPath]);
     Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'reset', '-config', $configPath, ':memory:']);
     Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'restore', '-config', $configPath, ':memory:']);
-    Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'sync', ':memory:']);
+    Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'sync', ':memory:', '-socket', dirname($binaryPath).'/litestream.sock']);
 });
 
 /**
@@ -64,6 +64,8 @@ function prepareCommandRegistrationPaths(): array
 
     config()->set('litestream.binary_path', $binaryPath);
     config()->set('litestream.config_path', $configPath);
+    config()->set('litestream.socket.enabled', true);
+    config()->set('litestream.socket.path', dirname($binaryPath).'/litestream.sock');
 
     return [$binaryPath, $configPath];
 }

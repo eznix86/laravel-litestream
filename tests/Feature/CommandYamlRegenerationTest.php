@@ -125,7 +125,7 @@ it('runs sync command for configured database paths', function (): void {
     expect($exitCode)->toBe(0)
         ->and(file_exists($configPath))->toBeFalse();
 
-    Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'sync', ':memory:']);
+    Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'sync', ':memory:', '-socket', dirname($binaryPath).'/litestream.sock']);
 });
 
 it('passes wait timeout and socket options to sync command', function (): void {
@@ -170,6 +170,8 @@ it('uses default wait timeout when wait is enabled without timeout option', func
         $binaryPath,
         'sync',
         ':memory:',
+        '-socket',
+        dirname($binaryPath).'/litestream.sock',
         '-wait',
         '-timeout',
         '30',
@@ -382,6 +384,10 @@ it('regenerates yaml with path modes and recursive key normalization', function 
                 ],
             ],
         ],
+        'socket' => [
+            'path' => dirname(config()->string('litestream.binary_path')).'/litestream.sock',
+            'permissions' => '0600',
+        ],
     ];
 
     expect($exitCode)->toBe(0)
@@ -408,6 +414,8 @@ function prepareYamlRegenerationCommandExecution(?string $configPath = null): ar
 
     config()->set('litestream.binary_path', $binaryPath);
     config()->set('litestream.config_path', $configPath);
+    config()->set('litestream.socket.enabled', true);
+    config()->set('litestream.socket.path', dirname($binaryPath).'/litestream.sock');
 
     return [$binaryPath, $configPath];
 }
