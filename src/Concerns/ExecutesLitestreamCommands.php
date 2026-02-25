@@ -43,9 +43,9 @@ trait ExecutesLitestreamCommands
      * @param  null|callable(string, string): void  $onOutput
      * @param  array<string, string>  $environment
      */
-    public function reset(string $binaryPath, string $configPath, ?callable $onOutput = null, array $environment = []): string
+    public function reset(string $binaryPath, string $configPath, string $databasePath, ?callable $onOutput = null, array $environment = []): string
     {
-        return $this->runWithTimeout([$binaryPath, 'reset', '-config', $configPath], $onOutput, $environment);
+        return $this->runWithTimeout([$binaryPath, 'reset', '-config', $configPath, $databasePath], $onOutput, $environment);
     }
 
     /**
@@ -55,6 +55,45 @@ trait ExecutesLitestreamCommands
     public function restore(string $binaryPath, string $configPath, string $path, ?callable $onOutput = null, array $environment = []): string
     {
         return $this->runWithTimeout([$binaryPath, 'restore', '-config', $configPath, $path], $onOutput, $environment);
+    }
+
+    /**
+     * @param  null|callable(string, string): void  $onOutput
+     * @param  array<string, string>  $environment
+     */
+    public function sync(
+        string $binaryPath,
+        string $configPath,
+        string $databasePath,
+        ?string $socketPath = null,
+        bool $wait = false,
+        ?int $timeout = null,
+        ?callable $onOutput = null,
+        array $environment = [],
+    ): string {
+        $command = [$binaryPath, 'sync', '-config', $configPath, $databasePath];
+
+        if (is_string($socketPath) && filled($socketPath)) {
+            $command[] = '-socket';
+            $command[] = $socketPath;
+        }
+
+        if ($wait) {
+            $command[] = '-wait';
+        }
+
+        if ($timeout !== null) {
+            $command[] = '-timeout';
+            $command[] = (string) $timeout;
+        }
+
+        $result = Process::env($environment)->forever()->run($command, $onOutput);
+
+        if ($result->failed()) {
+            throw new RuntimeException($this->resolveErrorMessage($result->errorOutput(), $result->exitCode()));
+        }
+
+        return Str::of($result->output())->trim()->value();
     }
 
     /**

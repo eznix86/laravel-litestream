@@ -9,6 +9,7 @@ use Eznix86\Litestream\Commands\ReplicateCommand;
 use Eznix86\Litestream\Commands\ResetCommand;
 use Eznix86\Litestream\Commands\RestoreCommand;
 use Eznix86\Litestream\Commands\StatusCommand;
+use Eznix86\Litestream\Commands\SyncCommand;
 use Illuminate\Support\ServiceProvider;
 use Override;
 
@@ -36,6 +37,7 @@ final class LitestreamServiceProvider extends ServiceProvider
                 StatusCommand::class,
                 ResetCommand::class,
                 RestoreCommand::class,
+                SyncCommand::class,
             ]);
         }
     }

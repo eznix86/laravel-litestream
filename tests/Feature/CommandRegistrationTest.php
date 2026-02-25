@@ -14,7 +14,8 @@ it('registers the package artisan commands', function (): void {
         ->and($output)->toContain('litestream:replicate')
         ->and($output)->toContain('litestream:status')
         ->and($output)->toContain('litestream:reset')
-        ->and($output)->toContain('litestream:restore');
+        ->and($output)->toContain('litestream:restore')
+        ->and($output)->toContain('litestream:sync');
 });
 
 it('invokes each command successfully in scaffold mode', function (): void {
@@ -30,6 +31,7 @@ it('invokes each command successfully in scaffold mode', function (): void {
         'litestream:status',
         'litestream:reset',
         'litestream:restore',
+        'litestream:sync',
     ];
 
     foreach ($commands as $commandName) {
@@ -42,8 +44,9 @@ it('invokes each command successfully in scaffold mode', function (): void {
 
     Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'replicate', '-config', $configPath]);
     Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'databases', '-config', $configPath]);
-    Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'reset', '-config', $configPath]);
+    Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'reset', '-config', $configPath, ':memory:']);
     Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'restore', '-config', $configPath, ':memory:']);
+    Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'sync', '-config', $configPath, ':memory:']);
 });
 
 /**

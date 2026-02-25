@@ -11,9 +11,10 @@ use Eznix86\Litestream\Concerns\StreamsLitestreamOutput;
 use Eznix86\Litestream\Concerns\ValidatesLitestream;
 use Eznix86\Litestream\LitestreamManager;
 use Illuminate\Console\Command;
+use InvalidArgumentException;
 use Throwable;
 
-final class ResetCommand extends Command
+final class SyncCommand extends Command
 {
     use ExecutesLitestreamCommands;
     use GeneratesLitestreamConfig;
@@ -21,9 +22,12 @@ final class ResetCommand extends Command
     use StreamsLitestreamOutput;
     use ValidatesLitestream;
 
-    protected $signature = 'litestream:reset';
+    protected $signature = 'litestream:sync
+        {--wait : Block until sync completes including remote replication}
+        {--timeout= : Maximum wait in seconds when --wait is used (must be 30 or more)}
+        {--socket= : Path to Litestream control socket}';
 
-    protected $description = 'Reset Litestream state for configured database mappings';
+    protected $description = 'Sync configured SQLite databases via Litestream';
 
     public function handle(): int
     {
@@ -35,11 +39,18 @@ final class ResetCommand extends Command
             $environment = $this->litestreamProcessEnvironment();
             $binaryPath = $this->resolveExistingBinaryPath();
 
+            $wait = (bool) $this->option('wait');
+            $timeout = $this->resolveTimeout($wait);
+            $socketPath = $this->resolveSocketPath();
+
             foreach (array_keys($connections) as $connectionKey) {
-                $this->reset(
+                $this->sync(
                     $binaryPath,
                     $configPath,
                     $this->resolveDatabasePath($connectionKey),
+                    $socketPath,
+                    $wait,
+                    $timeout,
                     $this->streamLitestreamOutput(...),
                     $environment,
                 );
@@ -51,5 +62,33 @@ final class ResetCommand extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    private function resolveTimeout(bool $wait): ?int
+    {
+        $timeout = $this->option('timeout');
+
+        if ($timeout === null) {
+            return $wait ? 30 : null;
+        }
+
+        $normalized = filter_var($timeout, FILTER_VALIDATE_INT);
+
+        if ($normalized === false || $normalized < 30) {
+            throw new InvalidArgumentException('The [--timeout] option must be an integer greater than or equal to 30 seconds.');
+        }
+
+        return $normalized;
+    }
+
+    private function resolveSocketPath(): ?string
+    {
+        $socketPath = $this->option('socket');
+
+        if (! is_string($socketPath) || blank($socketPath)) {
+            return null;
+        }
+
+        return $socketPath;
     }
 }

@@ -49,9 +49,9 @@ it('runs reset with a bounded timeout', function (): void {
         use ExecutesLitestreamCommands;
     };
 
-    $runner->reset('/usr/local/bin/litestream', '/tmp/litestream.yml', null, ['LITESTREAM_ENDPOINT' => 'http://localhost']);
+    $runner->reset('/usr/local/bin/litestream', '/tmp/litestream.yml', '/tmp/database.sqlite', null, ['LITESTREAM_ENDPOINT' => 'http://localhost']);
 
-    Process::assertRan(static fn ($process): bool => $process->command === ['/usr/local/bin/litestream', 'reset', '-config', '/tmp/litestream.yml']
+    Process::assertRan(static fn ($process): bool => $process->command === ['/usr/local/bin/litestream', 'reset', '-config', '/tmp/litestream.yml', '/tmp/database.sqlite']
         && $process->timeout === 120
         && $process->environment === ['LITESTREAM_ENDPOINT' => 'http://localhost']);
 });
@@ -70,5 +70,59 @@ it('runs restore with a bounded timeout', function (): void {
 
     Process::assertRan(static fn ($process): bool => $process->command === ['/usr/local/bin/litestream', 'restore', '-config', '/tmp/litestream.yml', '/tmp/database.sqlite']
         && $process->timeout === 120
+        && $process->environment === ['LITESTREAM_BUCKET' => 'backups']);
+});
+
+it('runs sync without wait and without timeout flag', function (): void {
+    Process::fake([
+        '*' => Process::result(output: 'synced'),
+    ]);
+
+    $runner = new class
+    {
+        use ExecutesLitestreamCommands;
+    };
+
+    $runner->sync('/usr/local/bin/litestream', '/tmp/litestream.yml', '/tmp/database.sqlite', null, false, null, null, ['LITESTREAM_BUCKET' => 'backups']);
+
+    Process::assertRan(static fn ($process): bool => $process->command === ['/usr/local/bin/litestream', 'sync', '-config', '/tmp/litestream.yml', '/tmp/database.sqlite']
+        && $process->timeout === null
+        && $process->environment === ['LITESTREAM_BUCKET' => 'backups']);
+});
+
+it('runs sync with wait timeout and socket flags', function (): void {
+    Process::fake([
+        '*' => Process::result(output: 'synced'),
+    ]);
+
+    $runner = new class
+    {
+        use ExecutesLitestreamCommands;
+    };
+
+    $runner->sync(
+        '/usr/local/bin/litestream',
+        '/tmp/litestream.yml',
+        '/tmp/database.sqlite',
+        '/var/run/litestream.sock',
+        true,
+        45,
+        null,
+        ['LITESTREAM_BUCKET' => 'backups'],
+    );
+
+    Process::assertRan(static fn ($process): bool => $process->command === [
+        '/usr/local/bin/litestream',
+        'sync',
+        '-config',
+        '/tmp/litestream.yml',
+        '/tmp/database.sqlite',
+        '-socket',
+        '/var/run/litestream.sock',
+        '-wait',
+        '-timeout',
+        '45',
+    ]
+        && $process->timeout === null
         && $process->environment === ['LITESTREAM_BUCKET' => 'backups']);
 });

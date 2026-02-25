@@ -90,6 +90,7 @@ The command validates configuration, regenerates YAML at `litestream.config_path
 php artisan litestream:status
 php artisan litestream:reset
 php artisan litestream:restore
+php artisan litestream:sync
 ```
 
 For deeper operational guidance, see:
@@ -181,6 +182,7 @@ For native command behavior and all flags, refer to Litestream's upstream comman
 - [Command: replicate](https://litestream.io/reference/replicate/)
 - [Command: databases](https://litestream.io/reference/databases/)
 - [Command: restore](https://litestream.io/reference/restore/)
+- [Command: sync](https://litestream.io/reference/sync/)
 
 
 

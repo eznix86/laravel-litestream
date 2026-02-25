@@ -81,7 +81,122 @@ it('regenerates yaml before reset command execution', function (): void {
         ->and(file_exists($configPath))->toBeTrue()
         ->and(file_get_contents($configPath))->toContain('dbs:');
 
-    Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'reset', '-config', $configPath]);
+    Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'reset', '-config', $configPath, ':memory:']);
+});
+
+it('runs reset once per configured sqlite connection path', function (): void {
+    [$binaryPath, $configPath] = prepareYamlRegenerationCommandExecution();
+
+    Process::fake([
+        '*' => Process::result(output: 'reset'),
+    ]);
+
+    config()->set('database.connections.analytics', [
+        'driver' => 'sqlite',
+        'database' => '/tmp/analytics.sqlite',
+        'prefix' => '',
+        'foreign_key_constraints' => true,
+        'busy_timeout' => 5000,
+        'journal_mode' => 'WAL',
+        'synchronous' => 'NORMAL',
+    ]);
+    config()->set('litestream.connections', [
+        'default' => ['name' => 'default', 'replicas' => ['s3'], 'path_mode' => 'append'],
+        'analytics' => ['name' => 'analytics', 'replicas' => ['s3'], 'path_mode' => 'append'],
+    ]);
+
+    $exitCode = Artisan::call('litestream:reset');
+
+    expect($exitCode)->toBe(0);
+
+    Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'reset', '-config', $configPath, ':memory:']);
+    Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'reset', '-config', $configPath, '/tmp/analytics.sqlite']);
+});
+
+it('regenerates yaml before sync command execution', function (): void {
+    [$binaryPath, $configPath] = prepareYamlRegenerationCommandExecution();
+
+    Process::fake([
+        '*' => Process::result(output: 'sync'),
+    ]);
+
+    $exitCode = Artisan::call('litestream:sync');
+
+    expect($exitCode)->toBe(0)
+        ->and(file_exists($configPath))->toBeTrue()
+        ->and(file_get_contents($configPath))->toContain('dbs:');
+
+    Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'sync', '-config', $configPath, ':memory:']);
+});
+
+it('passes wait timeout and socket options to sync command', function (): void {
+    [$binaryPath, $configPath] = prepareYamlRegenerationCommandExecution();
+
+    Process::fake([
+        '*' => Process::result(output: 'sync'),
+    ]);
+
+    $exitCode = Artisan::call('litestream:sync', [
+        '--wait' => true,
+        '--timeout' => '45',
+        '--socket' => '/var/run/litestream.sock',
+    ]);
+
+    expect($exitCode)->toBe(0);
+
+    Process::assertRan(static fn ($process): bool => $process->command === [
+        $binaryPath,
+        'sync',
+        '-config',
+        $configPath,
+        ':memory:',
+        '-socket',
+        '/var/run/litestream.sock',
+        '-wait',
+        '-timeout',
+        '45',
+    ]);
+});
+
+it('uses default wait timeout when wait is enabled without timeout option', function (): void {
+    [$binaryPath, $configPath] = prepareYamlRegenerationCommandExecution();
+
+    Process::fake([
+        '*' => Process::result(output: 'sync'),
+    ]);
+
+    $exitCode = Artisan::call('litestream:sync', ['--wait' => true]);
+
+    expect($exitCode)->toBe(0);
+
+    Process::assertRan(static fn ($process): bool => $process->command === [
+        $binaryPath,
+        'sync',
+        '-config',
+        $configPath,
+        ':memory:',
+        '-wait',
+        '-timeout',
+        '30',
+    ]);
+});
+
+it('fails sync when timeout is below minimum value', function (): void {
+    prepareYamlRegenerationCommandExecution();
+
+    Process::fake([
+        '*' => Process::result(output: 'sync'),
+    ]);
+
+    $exitCode = Artisan::call('litestream:sync', [
+        '--wait' => true,
+        '--timeout' => '29',
+    ]);
+
+    expect($exitCode)->toBe(1)
+        ->and(Artisan::output())->toContain('must be an integer greater than or equal to 30');
+
+    Process::assertNothingRan();
 });
 
 it('writes env placeholders to yaml and injects runtime process environment', function (): void {
