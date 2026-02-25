@@ -86,7 +86,7 @@ trait GeneratesLitestreamConfig
     /**
      * @param  array<string, array<string, mixed>>  $connections
      * @param  array<string, array<string, mixed>>  $replicas
-     * @return array<string, list<array<string, mixed>>>
+     * @return array{dbs: list<array{path: string, replicas: list<array<string, mixed>>}>, socket?: array{enabled: bool, path: string, permissions: string}}
      */
     private function buildYamlStructure(array $connections, array $replicas): array
     {
@@ -120,7 +120,7 @@ trait GeneratesLitestreamConfig
     }
 
     /**
-     * @return null|array{path: string, permissions: int}
+     * @return null|array{enabled: bool, path: string, permissions: string}
      */
     private function resolveSocketConfiguration(): ?array
     {
@@ -141,28 +141,29 @@ trait GeneratesLitestreamConfig
         $permissions = $this->resolveSocketPermissions(config('litestream.socket.permissions', '0600'));
 
         return [
+            'enabled' => true,
             'path' => $path,
             'permissions' => $permissions,
         ];
     }
 
-    private function resolveSocketPermissions(mixed $permissions): int
+    private function resolveSocketPermissions(mixed $permissions): string
     {
         if (is_int($permissions)) {
-            return $permissions;
+            return sprintf('%04o', $permissions);
         }
 
         throw_if(! is_string($permissions) || blank($permissions), InvalidArgumentException::class, 'Litestream socket.permissions must be an integer or octal string when socket is enabled.');
 
         if (preg_match('/^0?[0-7]{3}$/', $permissions) === 1) {
-            return intval($permissions, 8);
+            return mb_str_pad(mb_ltrim($permissions, '0'), 4, '0', STR_PAD_LEFT);
         }
 
         $decimalPermissions = filter_var($permissions, FILTER_VALIDATE_INT);
 
         throw_if($decimalPermissions === false || $decimalPermissions < 0, InvalidArgumentException::class, 'Litestream socket.permissions must be a valid non-negative integer or octal string (e.g. 0600).');
 
-        return $decimalPermissions;
+        return sprintf('%04o', $decimalPermissions);
     }
 
     /**
@@ -364,6 +365,7 @@ trait GeneratesLitestreamConfig
         }
 
         $yaml = mb_rtrim(Yaml::dump($payload, 10, 2), "\n")."\n";
+        $yaml = preg_replace("/^(\s*permissions:\s*)'([0-7]{4})'$/m", '$1$2', $yaml) ?? $yaml;
         $bytes = File::put($configPath, $yaml);
 
         if ($bytes === false) {

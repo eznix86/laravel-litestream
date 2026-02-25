@@ -35,6 +35,7 @@ final class SyncCommand extends Command
             $this->validate();
 
             $connections = LitestreamManager::make()->resolveConnections();
+            $this->generateConfig($connections);
             $binaryPath = $this->resolveExistingBinaryPath();
 
             $wait = (bool) $this->option('wait');

@@ -123,7 +123,8 @@ it('runs sync command for configured database paths', function (): void {
     $exitCode = Artisan::call('litestream:sync');
 
     expect($exitCode)->toBe(0)
-        ->and(file_exists($configPath))->toBeFalse();
+        ->and(file_exists($configPath))->toBeTrue()
+        ->and(file_get_contents($configPath))->toContain('dbs:');
 
     Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'sync', '-socket', dirname($binaryPath).'/litestream.sock', ':memory:']);
 });
@@ -385,8 +386,9 @@ it('regenerates yaml with path modes and recursive key normalization', function 
             ],
         ],
         'socket' => [
+            'enabled' => true,
             'path' => dirname(config()->string('litestream.binary_path')).'/litestream.sock',
-            'permissions' => 384,
+            'permissions' => '0600',
         ],
     ];
 
