@@ -113,12 +113,12 @@ it('runs sync with wait timeout and socket flags', function (): void {
     Process::assertRan(static fn ($process): bool => $process->command === [
         '/usr/local/bin/litestream',
         'sync',
-        '/tmp/database.sqlite',
         '-socket',
         '/var/run/litestream.sock',
         '-wait',
         '-timeout',
         '45',
+        '/tmp/database.sqlite',
     ]
         && $process->timeout === null
         && $process->environment === ['LITESTREAM_BUCKET' => 'backups']);

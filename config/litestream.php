@@ -85,7 +85,7 @@ return [
     'socket' => [
         'enabled' => (bool) env('LITESTREAM_SOCKET_ENABLED', true),
         'path' => env('LITESTREAM_SOCKET_PATH'),
-        'permissions' => env('LITESTREAM_SOCKET_PERMISSIONS', '0600'),
+        'permissions' => env('LITESTREAM_SOCKET_PERMISSIONS', 0o600),
     ],
 
     /*

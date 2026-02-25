@@ -70,7 +70,7 @@ trait ExecutesLitestreamCommands
         ?callable $onOutput = null,
         array $environment = [],
     ): string {
-        $command = [$binaryPath, 'sync', $databasePath];
+        $command = [$binaryPath, 'sync'];
 
         if (is_string($socketPath) && filled($socketPath)) {
             $command[] = '-socket';
@@ -85,6 +85,8 @@ trait ExecutesLitestreamCommands
             $command[] = '-timeout';
             $command[] = (string) $timeout;
         }
+
+        $command[] = $databasePath;
 
         $result = Process::env($environment)->forever()->run($command, $onOutput);
 

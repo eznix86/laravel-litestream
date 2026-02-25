@@ -70,7 +70,7 @@ The package can write Litestream's control socket settings into generated YAML:
 'socket' => [
     'enabled' => true,
     'path' => env('LITESTREAM_SOCKET_PATH'),
-    'permissions' => env('LITESTREAM_SOCKET_PERMISSIONS', '0600'),
+    'permissions' => env('LITESTREAM_SOCKET_PERMISSIONS', 0o600),
 ],
 ```
 
@@ -78,7 +78,7 @@ Defaults:
 
 - `socket.enabled`: `true`
 - `socket.path`: `<dirname(litestream.binary_path)>/litestream.sock` when `LITESTREAM_SOCKET_PATH` is not set
-- `socket.permissions`: `0600`
+- `socket.permissions`: `0600` (stored as numeric permissions in generated YAML)
 
 ### 3) Install Litestream binary
 

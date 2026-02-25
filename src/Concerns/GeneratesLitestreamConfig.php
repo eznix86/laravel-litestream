@@ -120,7 +120,7 @@ trait GeneratesLitestreamConfig
     }
 
     /**
-     * @return null|array{path: string, permissions: string}
+     * @return null|array{path: string, permissions: int}
      */
     private function resolveSocketConfiguration(): ?array
     {
@@ -138,14 +138,31 @@ trait GeneratesLitestreamConfig
             $path = dirname($binaryPath).'/litestream.sock';
         }
 
-        $permissions = config('litestream.socket.permissions', '0600');
-
-        throw_if(! is_string($permissions) || blank($permissions), InvalidArgumentException::class, 'Litestream socket.permissions must be a non-empty string when socket is enabled.');
+        $permissions = $this->resolveSocketPermissions(config('litestream.socket.permissions', '0600'));
 
         return [
             'path' => $path,
             'permissions' => $permissions,
         ];
+    }
+
+    private function resolveSocketPermissions(mixed $permissions): int
+    {
+        if (is_int($permissions)) {
+            return $permissions;
+        }
+
+        throw_if(! is_string($permissions) || blank($permissions), InvalidArgumentException::class, 'Litestream socket.permissions must be an integer or octal string when socket is enabled.');
+
+        if (preg_match('/^0?[0-7]{3}$/', $permissions) === 1) {
+            return intval($permissions, 8);
+        }
+
+        $decimalPermissions = filter_var($permissions, FILTER_VALIDATE_INT);
+
+        throw_if($decimalPermissions === false || $decimalPermissions < 0, InvalidArgumentException::class, 'Litestream socket.permissions must be a valid non-negative integer or octal string (e.g. 0600).');
+
+        return $decimalPermissions;
     }
 
     /**
