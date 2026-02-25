@@ -35,8 +35,6 @@ final class SyncCommand extends Command
             $this->validate();
 
             $connections = LitestreamManager::make()->resolveConnections();
-            $configPath = $this->generateConfig($connections);
-            $environment = $this->litestreamProcessEnvironment();
             $binaryPath = $this->resolveExistingBinaryPath();
 
             $wait = (bool) $this->option('wait');
@@ -46,13 +44,11 @@ final class SyncCommand extends Command
             foreach (array_keys($connections) as $connectionKey) {
                 $this->sync(
                     $binaryPath,
-                    $configPath,
                     $this->resolveDatabasePath($connectionKey),
                     $socketPath,
                     $wait,
                     $timeout,
                     $this->streamLitestreamOutput(...),
-                    $environment,
                 );
             }
         } catch (Throwable $exception) {

@@ -83,9 +83,9 @@ it('runs sync without wait and without timeout flag', function (): void {
         use ExecutesLitestreamCommands;
     };
 
-    $runner->sync('/usr/local/bin/litestream', '/tmp/litestream.yml', '/tmp/database.sqlite', null, false, null, null, ['LITESTREAM_BUCKET' => 'backups']);
+    $runner->sync('/usr/local/bin/litestream', '/tmp/database.sqlite', null, false, null, null, ['LITESTREAM_BUCKET' => 'backups']);
 
-    Process::assertRan(static fn ($process): bool => $process->command === ['/usr/local/bin/litestream', 'sync', '-config', '/tmp/litestream.yml', '/tmp/database.sqlite']
+    Process::assertRan(static fn ($process): bool => $process->command === ['/usr/local/bin/litestream', 'sync', '/tmp/database.sqlite']
         && $process->timeout === null
         && $process->environment === ['LITESTREAM_BUCKET' => 'backups']);
 });
@@ -102,7 +102,6 @@ it('runs sync with wait timeout and socket flags', function (): void {
 
     $runner->sync(
         '/usr/local/bin/litestream',
-        '/tmp/litestream.yml',
         '/tmp/database.sqlite',
         '/var/run/litestream.sock',
         true,
@@ -114,8 +113,6 @@ it('runs sync with wait timeout and socket flags', function (): void {
     Process::assertRan(static fn ($process): bool => $process->command === [
         '/usr/local/bin/litestream',
         'sync',
-        '-config',
-        '/tmp/litestream.yml',
         '/tmp/database.sqlite',
         '-socket',
         '/var/run/litestream.sock',

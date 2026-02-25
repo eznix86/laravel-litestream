@@ -63,7 +63,6 @@ trait ExecutesLitestreamCommands
      */
     public function sync(
         string $binaryPath,
-        string $configPath,
         string $databasePath,
         ?string $socketPath = null,
         bool $wait = false,
@@ -71,7 +70,7 @@ trait ExecutesLitestreamCommands
         ?callable $onOutput = null,
         array $environment = [],
     ): string {
-        $command = [$binaryPath, 'sync', '-config', $configPath, $databasePath];
+        $command = [$binaryPath, 'sync', $databasePath];
 
         if (is_string($socketPath) && filled($socketPath)) {
             $command[] = '-socket';

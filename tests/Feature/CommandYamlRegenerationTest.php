@@ -113,7 +113,7 @@ it('runs reset once per configured sqlite connection path', function (): void {
     Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'reset', '-config', $configPath, '/tmp/analytics.sqlite']);
 });
 
-it('regenerates yaml before sync command execution', function (): void {
+it('runs sync command for configured database paths', function (): void {
     [$binaryPath, $configPath] = prepareYamlRegenerationCommandExecution();
 
     Process::fake([
@@ -123,14 +123,13 @@ it('regenerates yaml before sync command execution', function (): void {
     $exitCode = Artisan::call('litestream:sync');
 
     expect($exitCode)->toBe(0)
-        ->and(file_exists($configPath))->toBeTrue()
-        ->and(file_get_contents($configPath))->toContain('dbs:');
+        ->and(file_exists($configPath))->toBeFalse();
 
-    Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'sync', '-config', $configPath, ':memory:']);
+    Process::assertRan(static fn ($process): bool => $process->command === [$binaryPath, 'sync', ':memory:']);
 });
 
 it('passes wait timeout and socket options to sync command', function (): void {
-    [$binaryPath, $configPath] = prepareYamlRegenerationCommandExecution();
+    [$binaryPath] = prepareYamlRegenerationCommandExecution();
 
     Process::fake([
         '*' => Process::result(output: 'sync'),
@@ -147,8 +146,6 @@ it('passes wait timeout and socket options to sync command', function (): void {
     Process::assertRan(static fn ($process): bool => $process->command === [
         $binaryPath,
         'sync',
-        '-config',
-        $configPath,
         ':memory:',
         '-socket',
         '/var/run/litestream.sock',
@@ -159,7 +156,7 @@ it('passes wait timeout and socket options to sync command', function (): void {
 });
 
 it('uses default wait timeout when wait is enabled without timeout option', function (): void {
-    [$binaryPath, $configPath] = prepareYamlRegenerationCommandExecution();
+    [$binaryPath] = prepareYamlRegenerationCommandExecution();
 
     Process::fake([
         '*' => Process::result(output: 'sync'),
@@ -172,8 +169,6 @@ it('uses default wait timeout when wait is enabled without timeout option', func
     Process::assertRan(static fn ($process): bool => $process->command === [
         $binaryPath,
         'sync',
-        '-config',
-        $configPath,
         ':memory:',
         '-wait',
         '-timeout',
