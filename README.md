@@ -70,6 +70,12 @@ php artisan litestream:install
 
 This downloads the latest compatible Litestream binary to `litestream.binary_path` and marks it executable.
 
+If Litestream is already installed on your server, point to it instead of downloading:
+
+```dotenv
+LITESTREAM_BINARY_PATH=/usr/local/bin/litestream
+```
+
 ### 4) Start replication
 
 ```bash

@@ -6,6 +6,7 @@ namespace Eznix86\Litestream\Concerns;
 
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -109,7 +110,7 @@ trait DownloadsLitestreamBinary
         throw_unless(is_array($release), RuntimeException::class, 'Invalid release metadata returned by GitHub API.');
 
         $platform = $this->litestreamOs();
-        $arch = $this->litestreamArch();
+        $architectures = $this->litestreamAssetArchitectures();
 
         $asset = collect(data_get($release, 'assets', []))
             ->filter(static fn (mixed $asset): bool => is_array($asset))
@@ -117,7 +118,7 @@ trait DownloadsLitestreamBinary
                 'name' => data_get($asset, 'name'),
                 'browser_download_url' => data_get($asset, 'browser_download_url'),
             ])
-            ->first(static function (array $asset) use ($platform, $arch): bool {
+            ->first(static function (array $asset) use ($platform, $architectures): bool {
                 $name = $asset['name'] ?? null;
                 $url = $asset['browser_download_url'] ?? null;
 
@@ -130,7 +131,7 @@ trait DownloadsLitestreamBinary
                 }
 
                 return Str::contains($name, $platform)
-                    && Str::contains($name, $arch)
+                    && $architectures->contains(static fn (string $architecture): bool => Str::contains($name, $architecture))
                     && Str::endsWith($name, '.tar.gz');
             });
 
@@ -142,8 +143,22 @@ trait DownloadsLitestreamBinary
         throw new RuntimeException(sprintf(
             'Unable to find latest Litestream asset for platform [%s] and architecture [%s].',
             $platform,
-            $arch,
+            $this->litestreamArch(),
         ));
+    }
+
+    /**
+     * @return Collection<int, string>
+     */
+    private function litestreamAssetArchitectures(): Collection
+    {
+        $architecture = $this->litestreamArch();
+
+        return match ($architecture) {
+            'amd64' => collect(['amd64', 'x86_64']),
+            'arm64' => collect(['arm64', 'aarch64']),
+            default => collect([$architecture]),
+        };
     }
 
     private function makeArchivePath(string $assetName): string
@@ -167,13 +182,27 @@ trait DownloadsLitestreamBinary
                 continue;
             }
 
-            if ($file->getFilename() !== 'litestream') {
+            $filename = $file->getFilename();
+
+            if ($filename === 'litestream') {
+                $path = $file->getRealPath();
+
+                if ($path !== false) {
+                    return $path;
+                }
+            }
+
+            if (! Str::startsWith($filename, 'litestream')) {
                 continue;
             }
 
             $path = $file->getRealPath();
 
             if ($path === false) {
+                continue;
+            }
+
+            if (! $file->isExecutable()) {
                 continue;
             }
 

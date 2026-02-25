@@ -69,6 +69,36 @@ it('installs latest binary, creates parent directories, sets executable perms, a
         ->and(fileperms($binaryPath) & 0777)->toBe(0755);
 });
 
+it('installs binary when archive binary filename is prefixed', function (): void {
+    $basePath = sys_get_temp_dir().'/litestream-tests/'.uniqid('install-prefixed-', true);
+    $binaryPath = $basePath.'/bin/litestream';
+    $configPath = $basePath.'/config/litestream.yml';
+
+    config()->set('litestream.binary_path', $binaryPath);
+    config()->set('litestream.config_path', $configPath);
+
+    [$assetName, $assetUrl] = resolveExpectedAsset();
+    $archiveBytes = buildLitestreamArchiveBytes('litestream-linux-x86_64');
+
+    Http::fake([
+        'https://api.github.com/repos/benbjohnson/litestream/releases/latest' => Http::response([
+            'assets' => [
+                [
+                    'name' => $assetName,
+                    'browser_download_url' => $assetUrl,
+                ],
+            ],
+        ], 200),
+        $assetUrl => Http::response($archiveBytes, 200),
+    ]);
+
+    $exitCode = Artisan::call('litestream:install');
+
+    expect($exitCode)->toBe(0)
+        ->and(file_exists($binaryPath))->toBeTrue()
+        ->and(fileperms($binaryPath) & 0777)->toBe(0755);
+});
+
 /**
  * @return array{0: string, 1: string}
  */
@@ -79,12 +109,19 @@ function resolveExpectedAsset(): array
         use DetectsPlatform;
     };
 
-    $assetName = sprintf('litestream-vtest-%s-%s.tar.gz', $detector->litestreamOs(), $detector->litestreamArch());
+    $os = $detector->litestreamOs();
+    $arch = $detector->litestreamArch();
+
+    if ($os === 'linux' && $arch === 'amd64') {
+        $arch = 'x86_64';
+    }
+
+    $assetName = sprintf('litestream-vtest-%s-%s.tar.gz', $os, $arch);
 
     return [$assetName, 'https://example.test/'.$assetName];
 }
 
-function buildLitestreamArchiveBytes(): string
+function buildLitestreamArchiveBytes(string $binaryFilename = 'litestream'): string
 {
     $tempPath = sys_get_temp_dir().'/litestream-tests/'.uniqid('archive-', true);
 
@@ -92,12 +129,13 @@ function buildLitestreamArchiveBytes(): string
         mkdir($tempPath, 0755, true);
     }
 
-    $binarySource = $tempPath.'/litestream';
+    $binarySource = $tempPath.'/'.$binaryFilename;
     file_put_contents($binarySource, '#!/bin/sh'.PHP_EOL.'echo litestream');
+    chmod($binarySource, 0755);
 
     $tarPath = $tempPath.'/litestream.tar';
     $archive = new PharData($tarPath);
-    $archive->addFile($binarySource, 'litestream-vtest/litestream');
+    $archive->addFile($binarySource, 'litestream-vtest/'.$binaryFilename);
     $archive->compress(Phar::GZ);
 
     $gzipPath = $tarPath.'.gz';
